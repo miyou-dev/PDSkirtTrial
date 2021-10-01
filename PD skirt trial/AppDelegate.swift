@@ -11,40 +11,42 @@ import SwiftUI
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-    
-
-
     var statusItem: NSStatusItem?
     var popOver = NSPopover()
     let persistenceController = PersistenceController.shared
-    
+
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        
-        
+
+
         let menuView = MenuView()
-            .environment(\.managedObjectContext, persistenceController.container.viewContext)
-        
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+
         popOver.behavior = .transient
         popOver.animates = true
-        
+
         popOver.contentViewController = NSViewController()
         popOver.contentViewController?.view = NSHostingView(rootView: menuView)
-        
+        popOver.contentViewController?.view.window?.makeKey()
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
+
         if let MenuButton = statusItem?.button {
             MenuButton.image = NSImage(systemSymbolName: "gift.circle.fill", accessibilityDescription: nil)
-            MenuButton.action = #selector(MenuButtonToggle)
+            MenuButton.action = #selector(menuButtonToggle)
         }
-        
+
     }
-    
-    @objc func MenuButtonToggle() {
-        if let menuButton = statusItem?.button {
-            self.popOver.show(relativeTo: menuButton.bounds, of: menuButton, preferredEdge: .minY)
+
+    @objc func menuButtonToggle(sender: AnyObject) {
+        // 显示关闭窗口
+        if popOver.isShown {
+            popOver.performClose(sender)
+        } else {
+            if let menuButton = statusItem?.button {
+                popOver.show(relativeTo: menuButton.bounds, of: menuButton, preferredEdge: .minY)
+            }
         }
     }
-    
 
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
@@ -62,13 +64,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
          creates and returns a container, having loaded the store for the
          application to it. This property is optional since there are legitimate
          error conditions that could cause the creation of the store to fail.
-        */
+         */
         let container = NSPersistentContainer(name: "PD_skirt_trial")
         container.loadPersistentStores(completionHandler: { (storeDescription, error) in
             if let error = error {
                 // Replace this implementation with code to handle the error appropriately.
                 // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                 
+
                 /*
                  Typical reasons for an error here include:
                  * The parent directory does not exist, cannot be created, or disallows writing.
@@ -111,16 +113,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         // Save changes in the application's managed object context before the application terminates.
         let context = persistentContainer.viewContext
-        
+
         if !context.commitEditing() {
             NSLog("\(NSStringFromClass(type(of: self))) unable to commit editing to terminate")
             return .terminateCancel
         }
-        
+
         if !context.hasChanges {
             return .terminateNow
         }
-        
+
         do {
             try context.save()
         } catch {
@@ -131,7 +133,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if (result) {
                 return .terminateCancel
             }
-            
+
             let question = NSLocalizedString("Could not save changes while quitting. Quit anyway?", comment: "Quit without saves error question message")
             let info = NSLocalizedString("Quitting now will lose any changes you have made since the last successful save", comment: "Quit without saves error question info");
             let quitButton = NSLocalizedString("Quit anyway", comment: "Quit anyway button title")
@@ -141,7 +143,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = info
             alert.addButton(withTitle: quitButton)
             alert.addButton(withTitle: cancelButton)
-            
+
             let answer = alert.runModal()
             if answer == .alertSecondButtonReturn {
                 return .terminateCancel
